@@ -9,7 +9,7 @@ const systemInfo = ref(null)
 const metrics = ref(null)
 const history = ref(null)
 
-const API_URL = 'http://localhost:8004/api'
+const API_URL = `http://${window.location.hostname}:8004/api`
 
 const cpuChartData = ref({
   labels: [],
