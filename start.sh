@@ -21,14 +21,17 @@ echo "Etihad Rail Monitoring - Starting"
 echo "========================================"
 
 # Start Backend
-echo "Starting Backend (Port 8004)..."
+echo "Starting Backend (Unix Socket)..."
 cd backend
-uv run uvicorn main:app --host 0.0.0.0 --port 8004 &
+# Remove existing socket if present
+rm -f /tmp/etihad-monitoring.sock
+uv run uvicorn main:app --uds /tmp/etihad-monitoring.sock &
 BACKEND_PID=$!
 cd ..
 
-# Wait a moment for backend to initialize
+# Wait a moment for backend to initialize and set permissions
 sleep 2
+chmod 666 /tmp/etihad-monitoring.sock
 
 # Start Frontend
 echo "Starting Frontend..."
