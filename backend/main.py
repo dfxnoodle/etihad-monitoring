@@ -5,7 +5,8 @@ import platform
 import time
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
+
 from contextlib import asynccontextmanager
 from database import init_db, get_db
 from models import SystemInfo, MetricData, HistoricalData
@@ -46,13 +47,28 @@ async def get_system_info():
         memory_total=psutil.virtual_memory().total
     )
 
+def parse_utc_timestamp(ts):
+    if isinstance(ts, str):
+        try:
+            # SQLite default format: "YYYY-MM-DD HH:MM:SS"
+            dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                dt = datetime.fromisoformat(ts)
+            except ValueError:
+                return datetime.now(timezone.utc)
+        return dt.replace(tzinfo=timezone.utc)
+    if isinstance(ts, datetime):
+        return ts.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc)
+
 @app.get("/api/metrics/latest", response_model=MetricData)
 async def get_latest_metrics(db = Depends(get_db)):
     async with db.execute("SELECT * FROM metrics ORDER BY timestamp DESC LIMIT 1") as cursor:
         row = await cursor.fetchone()
         if row:
             return MetricData(
-                timestamp=row['timestamp'],
+                timestamp=parse_utc_timestamp(row['timestamp']),
                 cpu_percent=row['cpu_percent'],
                 memory_percent=row['memory_percent'],
                 disk_percent=row['disk_percent'],
@@ -62,7 +78,7 @@ async def get_latest_metrics(db = Depends(get_db)):
             )
     # Fallback if no data yet
     return MetricData(
-        timestamp=datetime.now(),
+        timestamp=datetime.now(timezone.utc),
         cpu_percent=0,
         memory_percent=0,
         disk_percent=0,
@@ -80,7 +96,7 @@ async def get_history(hours: int = 1, db = Depends(get_db)):
         rows = await cursor.fetchall()
         metrics = [
             MetricData(
-                timestamp=row['timestamp'],
+                timestamp=parse_utc_timestamp(row['timestamp']),
                 cpu_percent=row['cpu_percent'],
                 memory_percent=row['memory_percent'],
                 disk_percent=row['disk_percent'],
