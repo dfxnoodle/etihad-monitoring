@@ -33,7 +33,7 @@ sleep 2
 # Start Frontend
 echo "Starting Frontend..."
 cd frontend
-npm run dev -- --host &
+npm run dev -- --host --port 5175 &
 FRONTEND_PID=$!
 cd ..
 
