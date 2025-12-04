@@ -1,0 +1,78 @@
+:root {
+  --etihad-red: #C10505;
+  --etihad-silver: #B9B9B9;
+  --etihad-bg: #F5F5F5;
+  --etihad-text: #333333;
+  --card-bg: #FFFFFF;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--etihad-bg);
+  color: var(--etihad-text);
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 3px solid var(--etihad-red);
+  padding-bottom: 10px;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--etihad-red);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-top: 4px solid var(--etihad-silver);
+}
+
+.card.accent {
+  border-top-color: var(--etihad-red);
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--etihad-text);
+}
+
+.metric-label {
+  font-size: 1rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .charts-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
