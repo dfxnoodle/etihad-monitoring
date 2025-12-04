@@ -32,6 +32,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.get("/api/system", response_model=SystemInfo)
 async def get_system_info():
     return SystemInfo(
