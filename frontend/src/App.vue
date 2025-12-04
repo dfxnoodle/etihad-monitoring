@@ -8,6 +8,7 @@ import DiskMetrics from './components/DiskMetrics.vue'
 const systemInfo = ref(null)
 const metrics = ref(null)
 const history = ref(null)
+const timeRange = ref(1) // Default 1 hour
 
 const API_URL = '/monitoring/api'
 
@@ -33,6 +34,11 @@ const memChartData = ref({
       data: []
     }
   ]
+})
+
+const diskChartData = ref({
+  labels: [],
+  datasets: []
 })
 
 const chartOptions = {
@@ -66,10 +72,19 @@ const fetchMetrics = async () => {
 
 const fetchHistory = async () => {
   try {
-    const response = await axios.get(`${API_URL}/history?hours=1`)
+    const response = await axios.get(`${API_URL}/history?hours=${timeRange.value}`)
     const data = response.data.metrics
     
-    const labels = data.map(m => new Date(m.timestamp).toLocaleTimeString())
+    // Format timestamp to UAE time (UTC+4)
+    const formatTime = (isoString) => {
+      return new Date(isoString).toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Dubai',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const labels = data.map(m => formatTime(m.timestamp))
     const cpuData = data.map(m => m.cpu_percent)
     const memData = data.map(m => m.memory_percent)
 
@@ -82,9 +97,47 @@ const fetchHistory = async () => {
       labels,
       datasets: [{ ...memChartData.value.datasets[0], data: memData }]
     }
+
+    // Process Disk Data
+    // We need to group by mountpoint
+    const diskDatasets = {}
+    const colors = ['#C10505', '#B9B9B9', '#28a745', '#ffc107', '#17a2b8', '#6610f2']
+    
+    data.forEach(m => {
+      if (m.disk_details) {
+        m.disk_details.forEach(d => {
+          // Skip /snap partitions
+          if (d.mountpoint.startsWith('/snap')) return
+
+          if (!diskDatasets[d.mountpoint]) {
+            diskDatasets[d.mountpoint] = []
+          }
+          diskDatasets[d.mountpoint].push(d.percent)
+        })
+      }
+    })
+
+    const datasets = Object.keys(diskDatasets).map((mountpoint, index) => ({
+      label: mountpoint,
+      borderColor: colors[index % colors.length],
+      backgroundColor: colors[index % colors.length],
+      data: diskDatasets[mountpoint],
+      tension: 0.4
+    }))
+
+    diskChartData.value = {
+      labels,
+      datasets
+    }
+
   } catch (error) {
     console.error('Error fetching history:', error)
   }
+}
+
+const setTimeRange = (hours) => {
+  timeRange.value = hours
+  fetchHistory()
 }
 
 let intervalId
@@ -126,9 +179,19 @@ onUnmounted(() => {
       <MetricCard label="Network Recv" :value="(metrics.net_recv / 1024 / 1024).toFixed(1)" unit="MB" />
     </div>
 
+    <div class="controls">
+      <button :class="{ active: timeRange === 1 }" @click="setTimeRange(1)">1h</button>
+      <button :class="{ active: timeRange === 6 }" @click="setTimeRange(6)">6h</button>
+      <button :class="{ active: timeRange === 12 }" @click="setTimeRange(12)">12h</button>
+      <button :class="{ active: timeRange === 24 }" @click="setTimeRange(24)">24h</button>
+      <button :class="{ active: timeRange === 72 }" @click="setTimeRange(72)">3d</button>
+      <button :class="{ active: timeRange === 168 }" @click="setTimeRange(168)">7d</button>
+    </div>
+
     <div class="charts-container">
       <HistoryChart :chartData="cpuChartData" :options="chartOptions" />
       <HistoryChart :chartData="memChartData" :options="chartOptions" />
+      <HistoryChart :chartData="diskChartData" :options="chartOptions" />
       <DiskMetrics v-if="metrics && metrics.disk_details" :partitions="metrics.disk_details" />
     </div>
   </div>
