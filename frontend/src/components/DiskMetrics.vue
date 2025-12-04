@@ -14,7 +14,7 @@ defineProps({
           <span class="device">{{ part.device }}</span>
         </div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill" :style="{ width: part.percent + '%' }"></div>
+          <div class="progress-bar-fill" :class="getUsageClass(part.percent)" :style="{ width: part.percent + '%' }"></div>
         </div>
         <div class="partition-stats">
           <span>{{ part.percent }}% used</span>
@@ -24,6 +24,18 @@ defineProps({
     </div>
   </div>
 </template>
+
+<script>
+export default {
+  methods: {
+    getUsageClass(percent) {
+      if (percent < 70) return 'usage-normal'
+      if (percent < 90) return 'usage-warning'
+      return 'usage-critical'
+    }
+  }
+}
+</script>
 
 <style scoped>
 .partitions-list {
@@ -57,10 +69,21 @@ defineProps({
 }
 
 .progress-bar-fill {
-  background-color: var(--etihad-red);
   height: 100%;
   border-radius: 4px;
-  transition: width 0.5s ease;
+  transition: width 0.5s ease, background-color 0.3s ease;
+}
+
+.usage-normal {
+  background-color: #28a745; /* Green */
+}
+
+.usage-warning {
+  background-color: #ffc107; /* Orange */
+}
+
+.usage-critical {
+  background-color: var(--etihad-red); /* Red */
 }
 
 .partition-stats {
