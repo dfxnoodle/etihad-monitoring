@@ -90,5 +90,3 @@ const statusIcon = (status) => {
   text-decoration: underline;
 }
 </style>
-</CodeContent>
-<parameter name="EmptyFile">false
