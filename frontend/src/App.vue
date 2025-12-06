@@ -4,13 +4,20 @@ import axios from 'axios'
 import MetricCard from './components/MetricCard.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import DiskMetrics from './components/DiskMetrics.vue'
+import StatusCard from './components/StatusCard.vue'
 
 const systemInfo = ref(null)
 const metrics = ref(null)
 const history = ref(null)
+const odooHealth = ref(null)
 const timeRange = ref(1) // Default 1 hour
 
 const API_URL = '/monitoring/api'
+
+// Configurable service URLs to monitor
+const SERVICES = {
+  odoo: 'https://al-tos.linus-services.com'
+}
 
 const cpuChartData = ref({
   labels: [],
@@ -140,16 +147,33 @@ const setTimeRange = (hours) => {
   fetchHistory()
 }
 
+const fetchOdooHealth = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/odoo/health`, {
+      params: { url: SERVICES.odoo }
+    })
+    odooHealth.value = response.data
+  } catch (error) {
+    console.error('Error fetching Odoo health:', error)
+    odooHealth.value = {
+      status: 'error',
+      message: 'Failed to check Odoo status'
+    }
+  }
+}
+
 let intervalId
 
 onMounted(async () => {
   await fetchSystemInfo()
   await fetchMetrics()
   await fetchHistory()
+  await fetchOdooHealth()
   
   intervalId = setInterval(async () => {
     await fetchMetrics()
     await fetchHistory()
+    await fetchOdooHealth()
   }, 5000)
 })
 
@@ -177,6 +201,20 @@ onUnmounted(() => {
       <MetricCard label="Memory Usage" :value="metrics.memory_percent" unit="%" />
       <MetricCard label="Network Sent" :value="(metrics.net_sent / 1024 / 1024).toFixed(1)" unit="MB" />
       <MetricCard label="Network Recv" :value="(metrics.net_recv / 1024 / 1024).toFixed(1)" unit="MB" />
+    </div>
+
+    <div class="services-section">
+      <h2 class="section-title">Service Health</h2>
+      <div class="services-grid">
+        <StatusCard 
+          v-if="odooHealth"
+          label="Odoo Platform (AL-TOS)"
+          :status="odooHealth.status"
+          :message="odooHealth.message"
+          :responseTime="odooHealth.response_time_ms"
+          :url="odooHealth.url"
+        />
+      </div>
     </div>
 
     <div class="controls">

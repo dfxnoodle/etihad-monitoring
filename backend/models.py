@@ -28,3 +28,11 @@ class MetricData(BaseModel):
 
 class HistoricalData(BaseModel):
     metrics: List[MetricData]
+
+class OdooHealthStatus(BaseModel):
+    url: str
+    status: str  # "online", "offline", "error"
+    redirect_location: Optional[str] = None
+    response_time_ms: Optional[float] = None
+    checked_at: datetime
+    message: Optional[str] = None

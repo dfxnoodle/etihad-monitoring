@@ -5,11 +5,12 @@ import platform
 import time
 import asyncio
 import json
+import httpx
 from datetime import datetime, timezone
 
 from contextlib import asynccontextmanager
 from database import init_db, get_db
-from models import SystemInfo, MetricData, HistoricalData
+from models import SystemInfo, MetricData, HistoricalData, OdooHealthStatus
 from collector import collect_metrics
 
 @asynccontextmanager
@@ -106,6 +107,70 @@ async def get_history(hours: int = 1, db = Depends(get_db)):
             ) for row in rows
         ]
         return HistoricalData(metrics=metrics)
+
+@app.get("/api/odoo/health", response_model=OdooHealthStatus)
+async def check_odoo_health(url: str):
+    """Check if Odoo platform is working by verifying redirect to /web"""
+    start_time = time.time()
+    
+    try:
+        async with httpx.AsyncClient(follow_redirects=False, timeout=10.0, verify=False) as client:
+            response = await client.head(url)
+            response_time = (time.time() - start_time) * 1000  # Convert to ms
+            
+            # Check if we get a redirect (301, 302, 303, 307, 308)
+            if response.status_code in (301, 302, 303, 307, 308):
+                location = response.headers.get("location", "")
+                
+                # Check if redirect is to /web
+                if "/web" in location:
+                    return OdooHealthStatus(
+                        url=url,
+                        status="online",
+                        redirect_location=location,
+                        response_time_ms=round(response_time, 2),
+                        checked_at=datetime.now(timezone.utc),
+                        message="Odoo platform is working correctly"
+                    )
+                else:
+                    return OdooHealthStatus(
+                        url=url,
+                        status="error",
+                        redirect_location=location,
+                        response_time_ms=round(response_time, 2),
+                        checked_at=datetime.now(timezone.utc),
+                        message=f"Unexpected redirect location: {location}"
+                    )
+            else:
+                return OdooHealthStatus(
+                    url=url,
+                    status="error",
+                    response_time_ms=round(response_time, 2),
+                    checked_at=datetime.now(timezone.utc),
+                    message=f"Unexpected status code: {response.status_code}"
+                )
+                
+    except httpx.TimeoutException:
+        return OdooHealthStatus(
+            url=url,
+            status="offline",
+            checked_at=datetime.now(timezone.utc),
+            message="Connection timeout"
+        )
+    except httpx.ConnectError as e:
+        return OdooHealthStatus(
+            url=url,
+            status="offline",
+            checked_at=datetime.now(timezone.utc),
+            message=f"Connection failed: {str(e)}"
+        )
+    except Exception as e:
+        return OdooHealthStatus(
+            url=url,
+            status="error",
+            checked_at=datetime.now(timezone.utc),
+            message=f"Error: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
