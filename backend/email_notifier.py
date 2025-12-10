@@ -144,6 +144,74 @@ This is an automated alert from the Etihad Monitoring System.
     return send_notification(subject, body_text, body_html)
 
 
+def send_system_alert(metric_name: str, current_value: float, threshold: float, 
+                      duration_minutes: int, details: str = None) -> str:
+    """
+    Send a system metrics alert email.
+    
+    Args:
+        metric_name: Name of the metric (CPU, Memory, Disk)
+        current_value: Current/average value of the metric
+        threshold: Threshold that was exceeded
+        duration_minutes: Duration over which the threshold was exceeded
+        details: Optional additional details (e.g., specific mountpoints)
+    
+    Returns:
+        Message ID from Azure Email Service
+    """
+    subject = f"⚠️ System Alert: {metric_name} Usage High"
+    
+    details_text = f"\nDetails:\n{details}" if details else ""
+    
+    body_text = f"""
+System Metrics Alert
+
+Metric: {metric_name}
+Current Value: {current_value:.1f}%
+Threshold: {threshold:.1f}%
+Duration: {duration_minutes} minutes
+{details_text}
+
+This is an automated alert from the Etihad Monitoring System.
+"""
+    
+    body_html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <div style="background-color: #ff9800; color: white; padding: 15px; border-radius: 5px;">
+                <h1 style="margin: 0;">⚠️ System Alert: {metric_name} Usage High</h1>
+            </div>
+            <div style="padding: 20px; border: 1px solid #ddd; margin-top: 10px; border-radius: 5px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Metric:</strong></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">{metric_name}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Current Value:</strong></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; color: #ff9800; font-weight: bold;">{current_value:.1f}%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Threshold:</strong></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">{threshold:.1f}%</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Duration:</strong></td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">{duration_minutes} minutes</td>
+                    </tr>
+                </table>
+                {"<div style='margin-top: 15px; padding: 15px; background-color: #fff3cd; border-radius: 5px;'><strong>Details:</strong><br><pre>" + details + "</pre></div>" if details else ""}
+            </div>
+            <p style="color: #666; font-size: 12px; margin-top: 20px;">
+                This is an automated alert from the Etihad Monitoring System.
+            </p>
+        </body>
+    </html>
+    """
+    
+    return send_notification(subject, body_text, body_html)
+
+
 if __name__ == "__main__":
     # Test sending a notification
     print("Testing email notification...")
